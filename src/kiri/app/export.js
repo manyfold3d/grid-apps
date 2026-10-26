@@ -52,7 +52,7 @@ export function exportFile(callback) {
 /**
  * Export gcode for FDM or CAM modes.
  * Calls worker to generate gcode, then presents dialog or invokes callback.
- * @param {function} callback - Optional callback(gcode_string, output_info)
+ * @param {function} callback - Optional callback which will receive file output and export-related data
  * @param {string} mode - Current mode ('FDM' or 'CAM')
  * @param {string[]} names - Widget filenames for export naming
  */
@@ -75,8 +75,11 @@ function callExport(callback, mode, names) {
         if (error) {
             api.show.alert(error, 5);
         } else if (callback) {
-            output.file = gcode.join('\r\n');
-            callback(output);
+            callback({
+              ...output,
+              file: gcode.join('\r\n'),
+              format: 'gcode'
+            });
         } else {
             exportGCodeDialog(gcode, mode === 'CAM' ? sections : undefined, output, names);
         }
@@ -86,7 +89,7 @@ function callExport(callback, mode, names) {
 /**
  * Export laser/waterjet/drag knife toolpaths.
  * Worker generates output, then presents export dialog with SVG/DXF/STL/GCode options or invokes callback with gcode
- * @param {function} callback - Optional callback(gcode_content, output_info)
+ * @param {function} callback - Optional callback which will receive file output and export-related data
  * @param {string[]} names - Widget filenames for export naming
  */
 function callExportLaser(callback, names) {
@@ -99,7 +102,8 @@ function callExportLaser(callback, names) {
             api.show.alert(error, 5);
         } else if (callback) {
             callback({
-              file: laser_driver.exportGCode(api.conf.get(), output)
+              file: laser_driver.exportGCode(api.conf.get(), output),
+              format: 'gcode'
             });
         } else {
             exportLaserDialog(output, names);
@@ -110,7 +114,7 @@ function callExportLaser(callback, names) {
 /**
  * Export SLA print data.
  * Worker generates layer images, then or invokes callback with file or delegates to SLA client for download.
- * @param {function} callback - Optional callback(file_content, output_info)
+ * @param {function} callback - Optional callback which will receive file output and export-related data
  * @param {string[]} names - Widget filenames for export naming
  */
 function callExportSLA(callback, names) {
@@ -121,7 +125,10 @@ function callExportSLA(callback, names) {
         if (error) {
             api.show.alert(error, 5);
         } else if (callback) {
-            callback(output);
+            callback({
+              ...output,
+              format: api.conf.get().device.slaFileExt
+            });
         } else {
             sla_client.printDownload(output, api, names);
         }
