@@ -27,10 +27,10 @@ function localSet(key, val) {
 /**
  * Main export entry point. Dispatches to mode-specific export handlers.
  * Extracts widget filenames to use for export filename suggestions.
- * @param {object} options - Export options (mode-specific)
+ * @param {object} callback - Optional export callback - if provided, output is sent to callback, otherwise save dialog is shown.
  * @returns {*} Result from mode-specific export handler
  */
-export function exportFile(options) {
+export function exportFile(callback) {
     let mode = api.mode.get();
     let names = api.widgets.all().map(w => w.meta ? w.meta.file : undefined)
         .filter(v => v)
@@ -42,10 +42,10 @@ export function exportFile(options) {
         case 'WEDM':
         case 'WJET':
         case 'DRAG':
-        case 'LASER': return callExportLaser(options, names);
-        case 'FDM': return callExport(options, mode, names);
-        case 'CAM': return callExport(options, mode, names);
-        case 'SLA': return callExportSLA(options, names);
+        case 'LASER': return callExportLaser(callback, names);
+        case 'FDM': return callExport(callback, mode, names);
+        case 'CAM': return callExport(callback, mode, names);
+        case 'SLA': return callExportSLA(callback, names);
     }
 }
 
@@ -75,7 +75,7 @@ function callExport(callback, mode, names) {
         if (error) {
             api.show.alert(error, 5);
         } else if (callback) {
-            callback(gcode.join('\r\n'), output);
+            callback(gcode.join('\r\n');
         } else {
             exportGCodeDialog(gcode, mode === 'CAM' ? sections : undefined, output, names);
         }
@@ -84,11 +84,11 @@ function callExport(callback, mode, names) {
 
 /**
  * Export laser/waterjet/drag knife toolpaths.
- * Worker generates output, then presents export dialog with SVG/DXF/STL/GCode options.
- * @param {object} options - Export options
+ * Worker generates output, then presents export dialog with SVG/DXF/STL/GCode options or invokes callback with gcode
+ * @param {function} callback - Optional callback(gcode_content, output_info)
  * @param {string[]} names - Widget filenames for export naming
  */
-function callExportLaser(options, names) {
+function callExportLaser(callback, names) {
     client.export(api.conf.get(), (line) => {
         // engine export uses lines
         // console.log({unexpected_line: line});
@@ -96,6 +96,8 @@ function callExportLaser(options, names) {
         // UI export uses output
         if (error) {
             api.show.alert(error, 5);
+        } else if (callback) {
+            callback(output);
         } else {
             exportLaserDialog(output, names);
         }
@@ -104,17 +106,19 @@ function callExportLaser(options, names) {
 
 /**
  * Export SLA print data.
- * Worker generates layer images, then delegates to SLA client for download.
- * @param {object} options - Export options
+ * Worker generates layer images, then or invokes callback with file or delegates to SLA client for download.
+ * @param {function} callback - Optional callback(file_content, output_info)
  * @param {string[]} names - Widget filenames for export naming
  */
-function callExportSLA(options, names) {
+function callExportSLA(callback, names) {
     client.export(api.conf.get(), (line) => {
         api.show.progress(line.progress, "exporting");
     }, (output, error) => {
         api.show.progress(0);
         if (error) {
             api.show.alert(error, 5);
+        } else if (callback) {
+            callback(output);
         } else {
             sla_client.printDownload(output, api, names);
         }
