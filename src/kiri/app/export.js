@@ -75,7 +75,8 @@ function callExport(callback, mode, names) {
         if (error) {
             api.show.alert(error, 5);
         } else if (callback) {
-            callback(gcode.join('\r\n');
+            output.file = gcode.join('\r\n');
+            callback(output);
         } else {
             exportGCodeDialog(gcode, mode === 'CAM' ? sections : undefined, output, names);
         }
