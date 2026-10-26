@@ -98,7 +98,9 @@ function callExportLaser(callback, names) {
         if (error) {
             api.show.alert(error, 5);
         } else if (callback) {
-            callback(output);
+            callback({
+              file: laser_driver.exportGCode(api.conf.get(), output)
+            });
         } else {
             exportLaserDialog(output, names);
         }
